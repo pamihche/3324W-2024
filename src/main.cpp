@@ -1,0 +1,286 @@
+#include "vex.h"
+
+using namespace vex;
+competition Competition;
+
+const bool USE_AUTONOMOUS_SELECTOR = true;
+
+
+
+bool cata_set = false;
+bool cataLastPress = false;
+const int CATA_SPEED = 75;
+
+
+Drive chassis( 
+	ZERO_TRACKER_ODOM, 
+	motor_group(MotorLeftFront, MotorLeftMiddle, MotorLeftBack), 
+	motor_group(MotorRightFront, MotorRightMiddle, MotorRightBack),
+
+	PORT6, // inertial sensor port
+	3.25, 
+	0.6,
+
+//Gyro scale, this is what your gyro reads when you spin the robot 360 degrees.
+//For most cases 360 will do fine here, but this scale factor can be very helpful when precision is necessary.
+360,
+
+/*---------------------------------------------------------------------------*/
+/*                                  PAUSE!                                   */
+/*                                                                           */
+/*  The rest of the drive constructor is for robots using POSITION TRACKING. */
+/*  If you are not using position tracking, leave the rest of the values as  */
+/*  they are.                                                                */
+/*---------------------------------------------------------------------------*/
+
+//If you are using ZERO_TRACKER_ODOM, you ONLY need to adjust the FORWARD TRACKER CENTER DISTANCE.
+
+//FOR HOLONOMIC DRIVES ONLY: Input your drive motors by position. This is only necessary for holonomic drives, otherwise this section can be left alone.
+//LF:      //RF:    
+PORT1,     -PORT2,
+
+//LB:      //RB: 
+PORT3,     -PORT4,
+
+//If you are using position tracking, this is the Forward Tracker port (the tracker which runs parallel to the direction of the chassis).
+//If this is a rotation sensor, enter it in "PORT1" format, inputting the port below.
+//If this is an encoder, enter the port as an integer. Triport A will be a "1", Triport B will be a "2", etc.
+3,
+
+//Input the Forward Tracker diameter (reverse it to make the direction switch):
+2.75,
+
+//Input Forward Tracker center distance (a positive distance corresponds to a tracker on the right side of the robot, negative is left.)
+//For a zero tracker tank drive with odom, put the positive distance from the center of the robot to the right side of the drive.
+//This distance is in inches:
+
+4.5,
+
+//Input the Sideways Tracker Port, following the same steps as the Forward Tracker Port:
+1,
+
+//Sideways tracker diameter (reverse to make the direction switch):
+-2.75,
+
+//Sideways tracker center distance (positive distance is behind the center of the robot, negative is in front):
+5.5
+
+);
+
+
+
+
+
+void programming_skills()
+{
+
+}
+
+
+void offensive_auton()
+{
+	odom_constants();
+    chassis.set_swing_constants(12, .45, 0.00070, 2.3, 15);
+    chassis.set_turn_constants(9, 0.32, 0.2, 2.2, 0);
+    MotorIntake.setBrake(hold);
+    chassis.turn_settle_time = 0;
+    chassis.turn_settle_error = 2; 
+    chassis.drive_settle_time = 100;
+    chassis.swing_settle_error = 0.5;
+    chassis.swing_max_voltage = 9;
+    chassis.swing_settle_time = 300;
+    chassis.swing_timeout = 800;
+
+
+    chassis.set_coordinates(0, 0, -45); 
+
+    chassis.drive_max_voltage = 12;
+
+    RightFrontWing.set(true);
+         wait(300, msec);
+    RightFrontWing.set(false);
+
+
+MotorIntake.spin(vex::forward, 600, rpm);
+
+	//chassis.drive_max_voltage = 6;
+    chassis.drive_to_point(-37, 54);
+    
+
+
+    chassis.right_swing_to_angle(-90);
+    chassis.drive_distance(-33.5);
+    chassis.drive_distance(24, -135);
+MotorIntake.stop();
+
+
+
+}
+void pre_auton(void) {
+
+	vexcodeInit();
+
+
+	wait(25, vex::timeUnits::msec);
+  
+}
+
+
+
+
+void autonomous(void) 
+{
+
+	chassis.Gyro.resetRotation();
+	chassis.Gyro.resetHeading();
+	chassis.DriveL.resetPosition();
+	chassis.DriveR.resetPosition();
+
+	Brain.Screen.clearScreen();
+
+
+	chassis.Gyro.calibrate();
+
+	while (chassis.Gyro.isCalibrating())
+	{
+		wait(25, msec);
+	}
+	
+
+	
+
+	offensive_auton();
+
+
+
+
+}
+
+//void balance_Control();
+
+void catapult_ButtonControl()
+{
+	if(controller(primary).ButtonA.pressing() and cataLastPress == false)
+	{
+		cata_set = !cata_set;
+	}
+	// keep track of press
+	cataLastPress = controller(primary).ButtonA.pressing();
+	if (cata_set) 
+	{
+		catapult1.spin(vex::forward, CATA_SPEED * 120, voltageUnits::mV);
+		LeftFrontWing.set(true);
+	//catapult2.spin(reverse, CATA_SPEED*120, voltageUnits::mV);
+	} else
+	{	
+		//LeftFrontWing.set(false);	
+		catapult1.spin(vex::forward, 0, voltageUnits::mV);
+	//catapult2.spin(reverse, 0, voltageUnits::mV);
+	}
+
+  
+}
+
+ void intake_ButtonControl()
+{
+	if(controller(primary).ButtonR2.pressing())
+	{
+		MotorIntake.setVelocity(600, rpm);
+		MotorIntake.spin(reverse, 600, rpm);
+	}
+	else if(controller(primary).ButtonR1.pressing())
+	{
+		MotorIntake.setVelocity(600, rpm);
+		MotorIntake.spin(vex::forward, 600, rpm);
+	}
+	else
+	{
+		MotorIntake.stop();
+	}
+
+}
+
+
+void front_left_wing_control(const vex::controller::button& controllerButton)
+{
+	static bool buttonPressed = false;
+
+	if(!buttonPressed && controllerButton.pressing()){
+		LeftFrontWing.set( ! LeftFrontWing.value() );
+	}
+
+	buttonPressed = controllerButton.pressing();
+
+}
+
+void front_right_wing_control(const vex::controller::button& controllerButton)
+{
+	static bool buttonPressed = false;
+
+	if(!buttonPressed && controllerButton.pressing()){
+		RightFrontWing.set( ! RightFrontWing.value() );
+	}
+
+	buttonPressed = controllerButton.pressing();
+
+}
+
+void balance_control(vex::controller::button controllerButton)
+{
+	static bool buttonPressed = false;
+
+	if(!buttonPressed && controllerButton.pressing()){
+		balance.set( ! balance.value() );
+	}
+
+	buttonPressed = controllerButton.pressing();
+
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              User Control Task                            */
+/*                                                                           */
+/*  This task is used to control your robot during the user control phase of */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+
+void usercontrol(void) {
+	
+	chassis.drive_max_voltage = 12;
+
+	while ( true ) 
+	{
+
+		intake_ButtonControl();
+		catapult_ButtonControl();
+		
+		chassis.control_tank();
+		wait(20, msec); 
+
+	}
+}
+
+
+//
+// Main will set up the competition functions and callbacks.
+//
+int main() {
+  // Run the pre-autonomous function.
+  pre_auton();
+
+  // Set up callbacks for autonomous and driver control periods.
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
+
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+
+}
